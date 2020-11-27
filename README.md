@@ -20,6 +20,7 @@ Autolib_Check = Autolib.Cars == Autolib['Bluecar counter']
 Autolib = pd.read_csv('Autolib_dataset (2).csv')
 
 Bluecar = Autolib.drop(['Cars','Utilib counter','Utilib 1.4 counter','Displayed comment','ID','Kind','Geo point','Public name','Subscription status'], axis=1)
+
 Bluecar.columns = Bluecar.columns.str.replace(' ', '_')
 Autolib
 ## License
