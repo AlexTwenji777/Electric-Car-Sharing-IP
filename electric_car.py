@@ -112,15 +112,15 @@ Bluecar.head()
 
 """### Outliers"""
 
-# From the data below, the max values of Bluecar_counter, Charge_slots and slots seems to be far 
-# from the rest of the data. Futhermore they're far from the 75th percentile. further investigation 
+# From the data below, the max values of Bluecar_counter, Charge_slots and slots seems to be far
+# from the rest of the data. Futhermore they're far from the 75th percentile. further investigation
 # should be done to see if they affect the data.
 # Values for Postal_code and hours do not count in this, as they are uniquely standardized units.
 
 Bluecar.describe()
 
-# From the data below, the max value seems to be far from the rest of the data It's far 
-# from the 75th percentile, further investigation should be done to see if it affects the data 
+# From the data below, the max value seems to be far from the rest of the data It's far
+# from the 75th percentile, further investigation should be done to see if it affects the data
 Bluecar.hour.value_counts()
 # This gives us a hint that 21:00 hrs could be the most popular hour. this will be investigated
 # during data analysis.
@@ -128,6 +128,122 @@ Bluecar.hour.value_counts()
 # First we'll store a copy of the original in order to manipulate the data and still have a copy of
 # the original to compare results with
 
-Bluecar_with_possible_outliers = Bluecar.copy()
-Bluecar_with_possible_outliers.head()
+Blue = Bluecar.copy(deep=True)
+Blue.head()
 
+# Bluecar.boxplot(column='Bluecar_counter', by='hour')
+# Bluecar.boxplot(column='Charge_Slots', by='hour')
+# Bluecar.boxplot(column='Slots', by='hour')
+# Bluecar.boxplot(column='Bluecar_counter', by='Charge_Slots') # There's outliers here.
+# Bluecar.boxplot(column='Bluecar_counter', by='Slots') # There's outliers here.
+Bluecar.boxplot(column='Charge_Slots', by='Slots') # There's outliers here.
+
+
+
+"""# DATA ANALYSIS
+
+## BLUECAR ONLY
+
+### With Possible Outliers
+"""
+
+# We will only be working with Paris.
+
+Blue = Blue[Blue.City == 'Paris']
+Blue.head()
+
+# Sorting the table in order of days ascending.
+Blue = Blue.sort_values(by=['Address', 'Date', 'hour'])
+Blue
+
+#Taken ['taken'] = Taken['Bluecar_counter'] - Taken['Bluecar_counter'].shift(-1)
+#Taken
+#def negative(x):
+#  if x < 0:
+#    z = 0
+#  else:
+#    z = x
+#  return z
+#Blue['taken_1'] = Blue.apply(lambda row: negative(row['taken']), axis=1)
+Engaged_Addresses = Blue.copy(deep=True)
+Engaged_Addresses = Engaged_Addresses[Engaged_Addresses['Address'] == Engaged_Addresses['Address'].shift(1)] # If the address below is equal to the current address
+
+Engaged_Addresses.loc[Engaged_Addresses.Address == Engaged_Addresses.Address.shift(-1), 'taken'] = Engaged_Addresses['Bluecar_counter'] - Engaged_Addresses['Bluecar_counter'].shift(-1)
+Engaged_Addresses.head()
+# From this we notice that addresses that appear only once means no picking up of cars or returning was done.
+# We can ignore these adresses as we have done above.
+# taken Null values and negatives should be replaced with 0 since they mean no cars were picked.
+
+Engaged_Addresses.taken.fillna(0, inplace= True)
+Engaged_Addresses.taken.value_counts()
+# We can replace the negative values listed below.
+
+Engaged_Addresses.taken = Engaged_Addresses.taken.replace([-1,-2,-3,-4,-5,-6,-7], 0)
+Engaged_Addresses.taken.value_counts()
+# Now we have the cars taken/ picked up.
+
+"""#### Answering Questions posed on the CRISP-DM Document's Analysis Section
+Per Day Analysis
+"""
+
+# 1. The most popular day with the most rides.
+Engaged_Addresses.groupby('Date')['taken'].sum().sort_values(ascending=False)
+
+# 2. The least popular day with the least rides.
+Engaged_Addresses.groupby('Date')['taken'].sum().sort_values(ascending=True)
+
+"""#### Hours Analysis"""
+
+# 1. The most popular hours (working or home hours).
+# From the calendar weekends are 1st, 7th and 8th
+# df[(df['Product'] == 'Sofa') & (df['MRP'] == 5000) & (df['Discount']== 20)]
+Engaged_hours = Engaged_Addresses.copy(deep= True)
+Weekday_hours = Engaged_hours[((Engaged_hours.hour >= 8) & (Engaged_hours.hour <= 18)) & ((Engaged_hours.Date != '2018-04-01') & (Engaged_hours.Date != '2018-04-07') & (Engaged_hours.Date != '2018-04-08'))]
+Weekday_hours.groupby('hour')['taken'].sum().sort_values(ascending=False)
+
+Weekday_hours_night = Engaged_hours[((Engaged_hours.hour < 8) | (Engaged_hours.hour > 18)) & ((Engaged_hours.Date != '2018-04-01') & (Engaged_hours.Date != '2018-04-07') & (Engaged_hours.Date != '2018-04-08'))]
+Weekday_hours_night.groupby('hour')['taken'].sum().sort_values(ascending=False)
+
+# 2. The least popular hours (working or home hours)
+Weekday_hours.groupby('hour')['taken'].sum().sort_values(ascending=True)
+
+Weekday_hours_night.groupby('hour')['taken'].sum().sort_values(ascending=True)
+
+print('Day rides :', Weekday_hours.taken.sum())
+print('Night rides :', Weekday_hours_night.taken.sum())
+
+# The above was for weekdays
+# Below, we'll consider weekends.
+#Most popular hours day time.
+Weekend_hours = Engaged_hours[((Engaged_hours.hour >= 8) & (Engaged_hours.hour <= 18)) & ((Engaged_hours.Date == '2018-04-01') | (Engaged_hours.Date == '2018-04-07') | (Engaged_hours.Date == '2018-04-08'))]
+Weekend_hours.groupby('hour')['taken'].sum().sort_values(ascending= False)
+
+#Most popular hours night time
+Weekend_hours_night = Engaged_hours[((Engaged_hours.hour < 8) | (Engaged_hours.hour > 18)) & ((Engaged_hours.Date == '2018-04-01') | (Engaged_hours.Date == '2018-04-07') | (Engaged_hours.Date == '2018-04-08'))]
+Weekend_hours_night.groupby('hour')['taken'].sum().sort_values(ascending= False)
+
+#Least popular day hours
+Weekend_hours.groupby('hour')['taken'].sum().sort_values(ascending= True)
+
+#Least popular night hours
+Weekend_hours_night.groupby('hour')['taken'].sum().sort_values(ascending= True)
+
+print('Day rides: ', Weekend_hours.taken.sum())
+print('Night rides: ', Weekday_hours_night.taken.sum())
+
+a = Weekday_hours.taken.sum() + Weekend_hours.taken.sum()
+b = Weekday_hours_night.taken.sum() + Weekend_hours_night.taken.sum()
+
+print("Week's total day rides = ", a)
+print("Week's total night rides = ", b)
+
+Engaged_hours.groupby('hour')['taken'].sum().sort_values(ascending= True)
+
+Engaged_hours.groupby('hour')['taken'].sum().sort_values(ascending= False)
+
+Engaged_hours.Address.value_counts()
+
+Engaged_hours
+
+Test = Engaged_hours[Engaged_hours.Address == '8 Avenue de la Porte de Montrouge']
+Test
