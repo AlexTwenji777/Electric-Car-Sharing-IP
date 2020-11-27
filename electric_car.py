@@ -229,7 +229,7 @@ Weekend_hours.groupby('hour')['taken'].sum().sort_values(ascending= True)
 Weekend_hours_night.groupby('hour')['taken'].sum().sort_values(ascending= True)
 
 print('Day rides: ', Weekend_hours.taken.sum())
-print('Night rides: ', Weekday_hours_night.taken.sum())
+print('Night rides: ', Weekend_hours_night.taken.sum())
 
 a = Weekday_hours.taken.sum() + Weekend_hours.taken.sum()
 b = Weekday_hours_night.taken.sum() + Weekend_hours_night.taken.sum()
@@ -247,3 +247,146 @@ Engaged_hours
 
 Test = Engaged_hours[Engaged_hours.Address == '8 Avenue de la Porte de Montrouge']
 Test
+
+# 3. Returning hours
+
+Engaged_hours.loc[Engaged_hours.Address == Engaged_hours.Address.shift(-1), 'returned'] = Engaged_hours['Bluecar_counter'] - Engaged_hours['Bluecar_counter'].shift(-1)
+Engaged_hours[Engaged_hours.Address == '8 Avenue de la Porte de Montrouge'] # Preview after the subtraction operation above.
+
+#From this we need only the negative numbers as they represent the returned cars.
+
+Engaged_hours.returned.fillna(0, inplace= True)
+Engaged_hours.returned.value_counts()
+
+Engaged_hours.returned = Engaged_hours.returned.replace([1,2,3,4,5,6,7], 0)
+Engaged_hours.returned.value_counts()
+
+# Convert the negative values to positive values
+Engaged_hours.returned = Engaged_hours.returned.abs()
+Engaged_hours
+
+# a.)  The most popular hours (working or home hours) for returning cars
+# day hours weekday
+Return_Weekday = Engaged_hours[((Engaged_hours.hour >= 8) & (Engaged_hours.hour <= 18)) & ((Engaged_hours.Date != '2018-04-01') & (Engaged_hours.Date != '2018-04-07') & (Engaged_hours.Date != '2018-04-08'))]
+Return_Weekday.groupby('hour')['returned'].sum().sort_values(ascending=False)
+
+# night hours weekday
+Return_Weekday_night = Engaged_hours[((Engaged_hours.hour < 8) | (Engaged_hours.hour > 18)) & ((Engaged_hours.Date != '2018-04-01') & (Engaged_hours.Date != '2018-04-07') & (Engaged_hours.Date != '2018-04-08'))]
+Return_Weekday_night.groupby('hour')['returned'].sum().sort_values(ascending=False)
+
+# b.) The least popular hours (working or home hours) for returns
+# day hours weekday
+Return_Weekday.groupby('hour')['returned'].sum().sort_values(ascending=True)
+
+# night hours weekday
+Return_Weekday_night.groupby('hour')['returned'].sum().sort_values(ascending=True)
+
+print('Day rides :', Return_Weekday.returned.sum())
+print('Night rides :', Return_Weekday_night.returned.sum())
+
+# Below, we'll consider weekends.
+#Most popular hours day time.
+Returned_Weekend = Engaged_hours[((Engaged_hours.hour >= 8) & (Engaged_hours.hour <= 18)) & ((Engaged_hours.Date == '2018-04-01') | (Engaged_hours.Date == '2018-04-07') | (Engaged_hours.Date == '2018-04-08'))]
+Returned_Weekend.groupby('hour')['returned'].sum().sort_values(ascending= False)
+
+#Most popular hours night time
+Returned_Weekend_night = Engaged_hours[((Engaged_hours.hour < 8) | (Engaged_hours.hour > 18)) & ((Engaged_hours.Date == '2018-04-01') | (Engaged_hours.Date == '2018-04-07') | (Engaged_hours.Date == '2018-04-08'))]
+Returned_Weekend_night.groupby('hour')['returned'].sum().sort_values(ascending= False)
+
+# Least popular day time
+Returned_Weekend.groupby('hour')['returned'].sum().sort_values(ascending= True)
+
+# Least popular night time
+Returned_Weekend_night.groupby('hour')['returned'].sum().sort_values(ascending= True)
+
+print('Day returns: ', Returned_Weekend.returned.sum())
+print('Night returns: ', Returned_Weekend_night.returned.sum())
+
+c = Return_Weekday.returned.sum() + Returned_Weekend.returned.sum()
+d = Return_Weekday_night.returned.sum() + Returned_Weekend_night.returned.sum()
+
+print("Week's total day returns = ", c)
+print("Week's total night returns = ", d)
+
+Engaged_hours.groupby('hour')['returned'].sum().sort_values(ascending= True)
+
+Engaged_hours.groupby('hour')['returned'].sum().sort_values(ascending= False)
+
+"""#### Stations Analysis"""
+
+Engaged_hours
+
+# The most popular station
+Stations = Engaged_hours.copy(deep= True)
+Stations
+
+# for picking up cars
+Stations.groupby('Address')['taken'].sum().sort_values(ascending=False)
+
+# for returning cars
+Stations.groupby('Address')['returned'].sum().sort_values(ascending=False)
+
+# for all activity (returned + picked up)
+Stations['activity'] = Stations['taken'] + Stations['returned']
+Stations.groupby('Address')['activity'].sum().sort_values(ascending= False)
+
+# Least popular station
+# for picking cars
+Stations.groupby('Address')['taken'].sum().sort_values(ascending=True)
+
+# for returning cars
+Stations.groupby('Address')['returned'].sum().sort_values(ascending=True)
+
+# for all activity (returned + picked up)
+Stations.groupby('Address')['activity'].sum().sort_values(ascending= True)
+
+Stations
+
+# 2. The most popular stations determined by the most popular hours to visit them.
+# Working = pd.DataFrame(['9','10','11','12','13','14','15','16','17','18'])
+# Stations.hour = Stations.hour.astype(str)
+# Stations[Stations['hour'].map(lambda x: Working.isin(x))]
+#Weekday working hours pickups
+Stations.hour = Stations.hour.astype(int)
+Weekday_hours.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
+
+# Weekday working hours returns
+Return_Weekday.groupby(['Address','hour'])['returned'].sum().sort_values(ascending=False)
+
+# Weekend day hours
+
+Weekend_hours.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
+
+# For returns
+
+Returned_Weekend.groupby(['Address','hour'])['returned'].sum().sort_values(ascending=False)
+
+# Weekday home hours
+Weekday_hours_night.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
+
+# For returns
+Return_Weekday_night.groupby(['Address','hour'])['returned'].sum().sort_values(ascending=False)
+
+# Weekend night hours
+Weekend_hours_night.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
+
+# Weekend night hours returns
+Returned_Weekend_night.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
+
+"""#### Postcode Analysis"""
+
+# Top Address can be seen as 8 Avenue de la Porte de Montrouge
+Stations.groupby('Address')['activity'].sum().sort_values(ascending= False)
+
+# Top Post Code can be seen as 75015
+Stations.groupby('Postal_code')['activity'].sum().sort_values(ascending= False)
+
+# Check 1 to see if 8 Avenue de la Porte de Montrouge is in 75015
+Post = Stations[Stations.Postal_code == 75015]
+Post[Post.Address == '8 Avenue de la Porte de Montrouge']
+
+#Check 2 for 75015 in 8 Avenue de la Porte de Montrouge
+Stations[Stations.Address == '8 Avenue de la Porte de Montrouge']
+#As can be seen the Postal_Code for the top address is 75014 and not 75015
+
+"""### UTILIB and UTILIB 1.4"""
