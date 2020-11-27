@@ -122,29 +122,20 @@ Bluecar.describe()
 # From the data below, the max value seems to be far from the rest of the data It's far
 # from the 75th percentile, further investigation should be done to see if it affects the data
 Bluecar.hour.value_counts()
-# This gives us a hint that 21:00 hrs could be the most popular hour. this will be investigated
-# during data analysis.
 
 # First we'll store a copy of the original in order to manipulate the data and still have a copy of
-# the original to compare results with
+# the original to compare results with, incase any transformations occur.
 
 Blue = Bluecar.copy(deep=True)
 Blue.head()
 
-# Bluecar.boxplot(column='Bluecar_counter', by='hour')
-# Bluecar.boxplot(column='Charge_Slots', by='hour')
-# Bluecar.boxplot(column='Slots', by='hour')
-# Bluecar.boxplot(column='Bluecar_counter', by='Charge_Slots') # There's outliers here.
-# Bluecar.boxplot(column='Bluecar_counter', by='Slots') # There's outliers here.
-Bluecar.boxplot(column='Charge_Slots', by='Slots') # There's outliers here.
-
-
+# There seems to be no outliers
+Bluecar.boxplot(column='Bluecar_counter', by='hour')
+Bluecar.boxplot(column='Slots', by='hour')
 
 """# DATA ANALYSIS
 
 ## BLUECAR ONLY
-
-### With Possible Outliers
 """
 
 # We will only be working with Paris.
@@ -156,23 +147,15 @@ Blue.head()
 Blue = Blue.sort_values(by=['Address', 'Date', 'hour'])
 Blue
 
-#Taken ['taken'] = Taken['Bluecar_counter'] - Taken['Bluecar_counter'].shift(-1)
-#Taken
-#def negative(x):
-#  if x < 0:
-#    z = 0
-#  else:
-#    z = x
-#  return z
-#Blue['taken_1'] = Blue.apply(lambda row: negative(row['taken']), axis=1)
 Engaged_Addresses = Blue.copy(deep=True)
 Engaged_Addresses = Engaged_Addresses[Engaged_Addresses['Address'] == Engaged_Addresses['Address'].shift(1)] # If the address below is equal to the current address
 
+# if address below is similar to current address, subtract to get no.of cars picked up.
 Engaged_Addresses.loc[Engaged_Addresses.Address == Engaged_Addresses.Address.shift(-1), 'taken'] = Engaged_Addresses['Bluecar_counter'] - Engaged_Addresses['Bluecar_counter'].shift(-1)
 Engaged_Addresses.head()
 # From this we notice that addresses that appear only once means no picking up of cars or returning was done.
 # We can ignore these adresses as we have done above.
-# taken Null values and negatives should be replaced with 0 since they mean no cars were picked.
+# 'taken' Null values and negatives should be replaced with 0 since they mean no cars were picked.
 
 Engaged_Addresses.taken.fillna(0, inplace= True)
 Engaged_Addresses.taken.value_counts()
@@ -196,7 +179,7 @@ Engaged_Addresses.groupby('Date')['taken'].sum().sort_values(ascending=True)
 
 # 1. The most popular hours (working or home hours).
 # From the calendar weekends are 1st, 7th and 8th
-# df[(df['Product'] == 'Sofa') & (df['MRP'] == 5000) & (df['Discount']== 20)]
+
 Engaged_hours = Engaged_Addresses.copy(deep= True)
 Weekday_hours = Engaged_hours[((Engaged_hours.hour >= 8) & (Engaged_hours.hour <= 18)) & ((Engaged_hours.Date != '2018-04-01') & (Engaged_hours.Date != '2018-04-07') & (Engaged_hours.Date != '2018-04-08'))]
 Weekday_hours.groupby('hour')['taken'].sum().sort_values(ascending=False)
@@ -237,8 +220,10 @@ b = Weekday_hours_night.taken.sum() + Weekend_hours_night.taken.sum()
 print("Week's total day rides = ", a)
 print("Week's total night rides = ", b)
 
+# Least popular hours inclusive of weekdays and weekends
 Engaged_hours.groupby('hour')['taken'].sum().sort_values(ascending= True)
 
+# Most popular hours inclusive of weekdays and weekends
 Engaged_hours.groupby('hour')['taken'].sum().sort_values(ascending= False)
 
 Engaged_hours.Address.value_counts()
@@ -308,8 +293,10 @@ d = Return_Weekday_night.returned.sum() + Returned_Weekend_night.returned.sum()
 print("Week's total day returns = ", c)
 print("Week's total night returns = ", d)
 
+# Least popular hours for returns weekdays and weekends inclusive
 Engaged_hours.groupby('hour')['returned'].sum().sort_values(ascending= True)
 
+# Most popular hours for returns weekdays and weekends inclusive
 Engaged_hours.groupby('hour')['returned'].sum().sort_values(ascending= False)
 
 """#### Stations Analysis"""
@@ -343,10 +330,8 @@ Stations.groupby('Address')['activity'].sum().sort_values(ascending= True)
 Stations
 
 # 2. The most popular stations determined by the most popular hours to visit them.
-# Working = pd.DataFrame(['9','10','11','12','13','14','15','16','17','18'])
-# Stations.hour = Stations.hour.astype(str)
-# Stations[Stations['hour'].map(lambda x: Working.isin(x))]
 #Weekday working hours pickups
+
 Stations.hour = Stations.hour.astype(int)
 Weekday_hours.groupby(['Address','hour'])['taken'].sum().sort_values(ascending=False)
 
@@ -389,4 +374,7 @@ Post[Post.Address == '8 Avenue de la Porte de Montrouge']
 Stations[Stations.Address == '8 Avenue de la Porte de Montrouge']
 #As can be seen the Postal_Code for the top address is 75014 and not 75015
 
-"""### UTILIB and UTILIB 1.4"""
+"""# RECOMMENDATION
+
+Since no data was provided about the pick up and return times, calculations had to be done to determine them by subtracting consecutive available cars within the same address, arranged by time of day and eventually days. This was a lengthy process and to avoid mistakes in future, it is recommended that the data is collected including these two important variables. From the analysis, the most popular days seem to be the weekdays, especially Wednesday to Friday, while the least popular are the weekends. This could be caused by heightened economic activity during the weekdays as most work is carried out then. The most popular time for both activities (pick ups and returns) is home time rather than working time. This could be a result of people leaving their workplace, hence able to engage with the service mostly after or before work. Additionally, in between the day, at around lunchtime there seems to be large activity as people could be free to engage with the service. As was observed, the top stations in general did not have a single hour in which they had dominant activity when compared to the other stations. This is to be expected as the busier the station, the more traffic will be spread out within different hours. Finally, the most popular address was not in the most popular post code. This is because there were more busy stations in the 75015 postcode, even  though they were not the top station. This could suggest that postcode 75015 is in a busier environment, where there’s more customer engagement with the product when compared to other postcodes.
+"""
